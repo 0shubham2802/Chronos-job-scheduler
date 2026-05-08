@@ -1,0 +1,139 @@
+// This tells Gradle what kind of project this is.
+// 'org.springframework.boot' makes Spring Boot work.
+// 'io.spring.dependency-management' lets Spring manage 
+// all library versions automatically so they don't conflict.
+plugins {
+	id 'org.springframework.boot' version '3.3.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'java'
+}
+
+// This is your project's identity.
+// group = your company/personal namespace (like a package name)
+// version = current version of your app
+// sourceCompatibility = we are writing Java 17 code
+group = 'com.chronos'
+version = '0.0.1-SNAPSHOT'
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+
+ext {
+	set('testcontainers.version', '1.21.4')
+}
+
+// Lombok needs special handling — this tells Gradle
+// to run Lombok's annotation processor when compiling.
+// Without this, @Getter @Setter etc. won't generate code.
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+// Where to download libraries from.
+// mavenCentral() is the main public repository for Java libraries.
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Spring Web — gives us REST API capabilities (@RestController, @GetMapping etc.)
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Spring Data JPA — lets us talk to the database using Java objects
+	// instead of writing raw SQL queries everywhere
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	// Spring Security — handles authentication and authorization
+	// (we'll configure JWT in Module 2, for now we'll disable it temporarily)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// Flyway — manages database migrations (creating tables, altering columns etc.)
+	// It runs SQL scripts in order so your DB schema is always in sync with your code
+	implementation 'org.flywaydb:flyway-core'
+
+
+
+	// Validation — lets us use @NotNull @Email @Size on our request objects
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// PostgreSQL JDBC Driver — the actual connector between Java and PostgreSQL
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// Lombok — generates boilerplate like getters, setters, constructors
+	// compileOnly means it's only needed at compile time, not at runtime
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// DevTools — auto-restarts your app when you make changes in IntelliJ
+	// Makes development much faster
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// Spring Boot Test — gives us JUnit 5, Mockito, MockMvc all in one dependency
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// Spring Security Test — lets us test secured endpoints easily
+	testImplementation 'org.springframework.security:spring-security-test'
+
+	// Testcontainers — spins up a real PostgreSQL in Docker just for tests
+	// This ensures tests run against a real database not a fake one
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:postgresql'
+	// Testcontainers Redis — spins up a real Redis in Docker for integration tests
+	testImplementation 'com.redis:testcontainers-redis:2.2.2'
+
+	// Gradle 9.x requires these to be explicit — no longer auto-included
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+	// JWT library — for generating and verifying JWT tokens
+// jjwt is the most popular JWT library for Java
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+	runtimeOnly    'io.jsonwebtoken:jjwt-impl:0.12.5'
+	runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+// OAuth2 Client — handles Google/GitHub OAuth flows automatically
+// Spring does all the redirect and token exchange for us
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	// Bucket4j — rate limiting library
+// Prevents users from hammering the API with too many requests
+	implementation 'com.bucket4j:bucket4j-core:8.10.1'
+
+	// Force Flyway 10.x — fixes PostgreSQL 17 compatibility
+// Flyway 9.x (default in Spring Boot 3.2.5) doesn't recognise PostgreSQL 17
+	implementation('org.flywaydb:flyway-core') {
+		version {
+			strictly '10.15.0'
+		}
+	}
+	implementation 'org.flywaydb:flyway-database-postgresql:10.15.0'
+
+	// Quartz scheduler — the core scheduling engine
+	implementation 'org.springframework.boot:spring-boot-starter-quartz'
+
+// Redis — for the job queue in Module 5
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.apache.commons:commons-pool2'
+
+	// JavaMailSender — sends email notifications on job failure
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	// Micrometer + Prometheus — exposes metrics at /actuator/prometheus
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+}
+
+// This tells Gradle to use JUnit 5 (Jupiter) as the test engine
+// Without this, your tests won't run properly
+tasks.named('test') {
+	useJUnitPlatform()
+
+	testLogging {
+		events "passed", "skipped", "failed"
+	}
+}
