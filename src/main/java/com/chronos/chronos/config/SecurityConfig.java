@@ -1,5 +1,10 @@
 package com.chronos.chronos.config;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
+
 import com.chronos.chronos.security.CustomUserDetailsService;
 import com.chronos.chronos.security.JwtAuthFilter;
 import com.chronos.chronos.security.OAuth2LoginSuccessHandler;
@@ -33,6 +38,18 @@ public class SecurityConfig {
     // 401 = not authenticated (no token)
     // 403 = authenticated but not allowed (wrong permissions)
     // Spring defaults to 403 for both — this fixes that
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
+    }
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
@@ -47,6 +64,8 @@ public class SecurityConfig {
             throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // Use our custom entry point — returns 401 not 403
                 .exceptionHandling(ex -> ex
