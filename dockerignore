@@ -1,0 +1,10 @@
+build/
+.gradle/
+.idea/
+*.iml
+*.iws
+.DS_Store
+out/
+target/
+*.log
+.env
