@@ -1,0 +1,104 @@
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL Database ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: chronos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chronos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chronos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chronos-network
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: chronos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chronos-network
+
+  # ── Spring Boot Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chronos-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chronos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+
+      # Redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+      # JWT
+      JWT_SECRET: chronos-super-secret-key-for-signing-jwt-tokens-must-be-long
+
+      # Email — replace with your real credentials
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-your@gmail.com}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password}
+      CHRONOS_NOTIFICATION_ENABLED: ${NOTIFICATION_ENABLED:-false}
+
+      # Quartz
+      SPRING_QUARTZ_PROPERTIES_ORG_QUARTZ_JOBSTORE_DRIVERDELEGATECLASS: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      SPRING_QUARTZ_PROPERTIES_ORG_QUARTZ_JOBSTORE_ISCLUSTERED: false
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chronos-network
+
+  # ── React Frontend ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ./chronos-frontend
+      dockerfile: Dockerfile
+    container_name: chronos-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - chronos-network
+
+# ── Volumes ──────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+# ── Networks ─────────────────────────────────────────────────
+networks:
+  chronos-network:
+    driver: bridge
